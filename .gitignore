@@ -19,7 +19,10 @@ __pycache__/
 # Project Specific
 requirements.txt
 
-poppler/
+# Data files
+backend/app/data/
+uploads/
+
 
 
 
