@@ -1,0 +1,25 @@
+# Environments
+.venv/
+env/
+venv/
+
+# Ignore data files
+data/
+
+# Python junk
+__pycache__/
+*.pyc
+
+# Secrets & Local Config
+.env
+.azure/
+.idea/
+.vscode/
+
+# Project Specific
+requirements.txt
+
+poppler/
+
+
+
