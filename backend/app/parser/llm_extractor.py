@@ -5,9 +5,19 @@ import re
 from openai import OpenAI
 from backend.app.core.config import OPENAI_API_KEY, LLM_MODEL
 
+
+# =========================
+# INIT CLIENT
+# =========================
+if not OPENAI_API_KEY:
+    raise ValueError("❌ OPENAI_API_KEY is not loaded from .env")
+
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
+# =========================
+# MAIN FUNCTION
+# =========================
 def extract_with_llm(full_text):
     try:
         prompt = f"""
@@ -31,27 +41,27 @@ Rules:
 - Return clean values only
 
 Invoice Text:
-{full_text}
+{full_text[:4000]}
 """
 
         response = client.chat.completions.create(
-            model=LLM_MODEL,  # e.g. "gpt-4o-mini" or "gpt-5-mini"
+            model=LLM_MODEL or "gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You extract structured data from invoices."},
                 {"role": "user", "content": prompt}
-            ],
-            temperature=0
+            ]
+            # ✅ REMOVED temperature (fixes your error)
         )
 
         content = response.choices[0].message.content.strip()
 
         # ==========================
-        # 🔥 FIX 1: CLEAN RESPONSE
+        # CLEAN RESPONSE
         # ==========================
         content = clean_json_response(content)
 
         # ==========================
-        # 🔥 FIX 2: SAFE JSON LOAD
+        # SAFE JSON LOAD
         # ==========================
         data = json.loads(content)
 
@@ -67,18 +77,18 @@ Invoice Text:
 # =========================================
 def clean_json_response(content):
     """
-    Removes markdown, text noise, etc.
+    Removes markdown, extra text, etc.
     """
 
-    # Remove ```json ... ```
-    content = re.sub(r"```json", "", content)
+    # Remove ```json blocks
+    content = re.sub(r"```json", "", content, flags=re.IGNORECASE)
     content = re.sub(r"```", "", content)
 
-    # Remove anything before first {
+    # Trim before first {
     if "{" in content:
         content = content[content.index("{"):]
 
-    # Remove anything after last }
+    # Trim after last }
     if "}" in content:
         content = content[:content.rindex("}") + 1]
 
@@ -90,13 +100,19 @@ def clean_json_response(content):
 # =========================================
 def normalize_output(data):
     """
-    Ensures consistent output format
+    Ensures consistent clean output
     """
 
     def clean(val):
         if val in ["", "null", None]:
             return None
-        return str(val).strip()
+
+        val = str(val).strip()
+
+        # remove currency symbols
+        val = re.sub(r'[₹$,]', '', val)
+
+        return val
 
     return {
         "invoice_number": clean(data.get("invoice_number")),
