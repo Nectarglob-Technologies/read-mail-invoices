@@ -1,4 +1,6 @@
 # invoice_parser.py
+from backend.app.parser.table_parser import extract_line_items_layout
+
 
 import re
 
@@ -193,7 +195,7 @@ def parse_invoice(ocr_data):
         "total_amount": extract_total(lines),
         "email": None,
         "phone_number": None,
-        "line_items": [],
+        "line_items": extract_line_items_layout(ocr_data),
         "confidence": {}
     }
 

@@ -4,11 +4,12 @@ import tempfile
 from backend.app.ocr.pdf_to_image import pdf_to_images
 from backend.app.ocr.ocr_engine import extract_text
 from backend.app.parser.invoice_parser import parse_invoice
-from backend.app.parser.llm_extractor import extract_with_llm
 from backend.app.storage.json_writer import save_json
 
 from backend.app.utils.logger import get_logger
 from backend.app.jobs.job_runner import create_job, update_job
+from backend.app.parser.llm_extractor import extract_with_llm, extract_table_with_llm
+
 
 logger = get_logger()
 
@@ -96,6 +97,15 @@ def process_invoice(file_bytes, filename="invoice.pdf"):
             for key, value in llm_result.items():
                 if not invoice_data.get(key) and value:
                     invoice_data[key] = value
+
+        # ================= TABLE FALLBACK =================
+        if not invoice_data.get("line_items") or len(invoice_data["line_items"]) < 2:
+            logger.info("No line items found → using LLM")
+
+            llm_items = extract_table_with_llm(full_text)
+
+            if llm_items:
+                invoice_data["line_items"] = llm_items
 
         invoice_data["ocr_confidence"] = round(avg_conf, 3)
 

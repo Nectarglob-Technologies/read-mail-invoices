@@ -21,28 +21,28 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 def extract_with_llm(full_text):
     try:
         prompt = f"""
-You are an invoice data extraction engine.
+        You are an invoice data extraction engine.
 
-Extract the following fields from the invoice text.
+        Extract the following fields from the invoice text.
 
-Return ONLY valid JSON (no explanation, no markdown):
+        Return ONLY valid JSON (no explanation, no markdown):
 
-{{
-  "invoice_number": "",
-  "invoice_date": "",
-  "customer_name": "",
-  "total_amount": ""
-}}
+        {{
+        "invoice_number": "",
+        "invoice_date": "",
+        "customer_name": "",
+        "total_amount": ""
+        }}
 
-Rules:
-- Do NOT guess values
-- If not found, return null
-- Remove labels like "Invoice No", "Date", etc.
-- Return clean values only
+        Rules:
+        - Do NOT guess values
+        - If not found, return null
+        - Remove labels like "Invoice No", "Date", etc.
+        - Return clean values only
 
-Invoice Text:
-{full_text[:4000]}
-"""
+        Invoice Text:
+        {full_text[:4000]}
+        """
 
         response = client.chat.completions.create(
             model=LLM_MODEL or "gpt-4o-mini",
@@ -120,3 +120,43 @@ def normalize_output(data):
         "customer_name": clean(data.get("customer_name")),
         "total_amount": clean(data.get("total_amount")),
     }
+
+def extract_table_with_llm(text):
+    try:
+        prompt = f"""
+        Extract invoice line items.
+
+        Return JSON:
+
+        [
+        {{
+            "description": "",
+            "quantity": "",
+            "rate": "",
+            "amount": ""
+        }}
+        ]
+
+        Rules:
+        - Extract ALL rows
+        - Ignore totals/taxes
+        - Return clean values
+
+        Invoice:
+        {text[:4000]}
+        """
+
+        response = client.chat.completions.create(
+            model=LLM_MODEL or "gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = clean_json_response(content)
+
+        return json.loads(content)
+
+    except Exception as e:
+        print("❌ LLM TABLE ERROR:", str(e))
+        return []
+
