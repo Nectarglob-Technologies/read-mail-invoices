@@ -1,6 +1,4 @@
 easyocr
-paddleocr
-paddlepaddle
 PyMuPDF
 Pillow
 python-dotenv
